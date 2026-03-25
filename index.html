@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 Princess Lucky Wheel 🌸</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-pink: #ffb6c1;
+            --dark-pink: #ff69b4;
+            --rose-gold: #e0ac9d;
+            --bg-color: #fff0f5;
+            --text-color: #4a4a4a;
+        }
+
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: var(--bg-color);
+            background-image: radial-gradient(at 10% 20%, rgba(255,182,193,0.3) 0px, transparent 50%),
+                              radial-gradient(at 80% 80%, rgba(255,105,180,0.2) 0px, transparent 50%);
+            font-family: 'Quicksand', sans-serif; color: var(--text-color);
+        }
+
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        h1 {
+            font-family: 'Dancing Script', cursive; font-size: 50px; margin: 0 0 10px 0;
+            color: var(--dark-pink); text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* KHUNG NGOÀI: Tăng kích thước và dùng Flex để căn giữa tuyệt đối */
+        .wheel-outer {
+            position: relative;
+            width: 720px; 
+            height: 720px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--rose-gold), #fff, var(--primary-pink));
+            box-shadow: 0 10px 50px rgba(255, 105, 180, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+        }
+
+        /* CANVAS: Đảm bảo khớp khít với viền trắng */
+        #wheel-canvas {
+            width: 680px; 
+            height: 680px;
+            border-radius: 50%;
+            border: 10px solid #fff; /* Viền trắng dày hơn cho sang */
+            background-color: #fff;
+            transition: transform 10s cubic-bezier(0.1, 0, 0, 1);
+            will-change: transform;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
+        }
+
+        /* KIM CHỈ: Căn chỉnh lại vị trí để không bị lệch tâm */
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background-color: var(--dark-pink);
+            z-index: 30;
+            clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        }
+
+        #spin-btn {
+            position: absolute;
+            z-index: 40;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--dark-pink), var(--primary-pink));
+            color: white;
+            border: 8px solid #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            font-family: 'Dancing Script', cursive;
+            font-size: 30px;
+            box-shadow: 0 5px 20px rgba(255, 105, 180, 0.5);
+            transition: all 0.3s;
+        }
+
+        #spin-btn:hover:not(:disabled) { transform: scale(1.1); }
+
+        /* MODALS */
+        .res-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        .res-content {
+            background: #fff; padding: 50px; border-radius: 40px; text-align: center;
+            border: 4px solid var(--primary-pink);
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+        #res-name { font-size: 45px; font-weight: 900; color: var(--dark-pink); margin: 20px 0; }
+
+        /* SETTING MODAL */
+        .setting-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 500;
+        }
+        .setting-content { background: #fff; padding: 30px; border-radius: 20px; width: 400px; max-height: 80vh; overflow-y: auto; }
+        .prize-row { display: flex; gap: 5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Princess Wheel</h1>
+    <p style="opacity:0.5; font-size:12px; margin-bottom:15px;">Shift + Enter để cài đặt</p>
+
+    <div class="wheel-outer">
+        <div class="pointer"></div>
+        <canvas id="wheel-canvas" width="800" height="800"></canvas>
+        <button id="spin-btn">Quay</button>
+    </div>
+
+    <div class="res-modal" id="resModal">
+        <div class="res-content">
+            <div style="font-size: 70px;">✨</div>
+            <h2 style="font-family:'Dancing Script'; font-size: 35px; margin:0;">Chúc mừng nàng...</h2>
+            <div id="res-name">---</div>
+            <button onclick="closeRes()" style="padding:15px 40px; cursor:pointer; background:var(--dark-pink); color:white; border:none; border-radius:50px; font-weight:bold; font-size:16px;">NHẬN QUÀ</button>
+        </div>
+    </div>
+
+    <div class="setting-modal" id="settingModal">
+        <div class="setting-content">
+            <h2 style="color:var(--dark-pink)">Cài đặt</h2>
+            <div id="prizeList"></div>
+            <button onclick="addNewField()" style="width:100%; margin:10px 0; padding:10px;">+ Thêm</button>
+            <button onclick="saveSettings()" style="width:100%; padding:15px; background:var(--dark-pink); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">LƯU LẠI</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const btn = document.getElementById('spin-btn');
+        
+        let prizeData = JSON.parse(localStorage.getItem('femDataV3')) || [
+            { name: "Son Dior 💄", rate: 25 },
+            { name: "Gấu bông 🧸", rate: 25 },
+            { name: "Voucher Spa", rate: 25 },
+            { name: "May mắn 🌸", rate: 25 }
+        ];
+
+        let currentRotation = 0;
+
+        function drawWheel() {
+            const num = prizeData.length;
+            const arc = (2 * Math.PI) / num;
+            const colors = ["#ffb6c1", "#a7dbd8", "#e0bbe4", "#ffccac", "#b2e2f2", "#f7e8a4"];
+            ctx.clearRect(0, 0, 800, 800);
+            prizeData.forEach((p, i) => {
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                ctx.moveTo(400, 400);
+                ctx.arc(400, 400, 400, i * arc, (i + 1) * arc);
+                ctx.fill();
+                ctx.save();
+                ctx.translate(400, 400);
+                ctx.rotate(i * arc + arc / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#4a4a4a";
+                ctx.font = "bold 24px Quicksand";
+                ctx.fillText(p.name, 360, 10);
+                ctx.restore();
+            });
+        }
+
+        btn.addEventListener('click', () => {
+            if (btn.disabled) return;
+            btn.disabled = true;
+
+            const total = prizeData.reduce((s, p) => s + p.rate, 0);
+            let rand = Math.random() * total;
+            let targetIdx = 0;
+            for (let i = 0; i < prizeData.length; i++) {
+                if (rand < prizeData[i].rate) { targetIdx = i; break; }
+                rand -= prizeData[i].rate;
+            }
+
+            const arcDeg = 360 / prizeData.length;
+            const stopDeg = 360 - (targetIdx * arcDeg) - (arcDeg / 2);
+            // Quay 10 vòng + góc dừng + 270 (để bù vị trí kim ở đỉnh)
+            const totalRotation = currentRotation + (360 * 10) + ((stopDeg - (currentRotation % 360) + 360) % 360) + 270;
+            
+            canvas.style.transform = `rotate(${totalRotation}deg)`;
+            currentRotation = totalRotation;
+
+            // Chờ 10s (theo transition) + 1s dừng
+            setTimeout(() => {
+                document.getElementById('res-name').innerText = prizeData[targetIdx].name;
+                document.getElementById('resModal').style.display = 'flex';
+                
+                // PHÁO HOA ĐÈ LÊN TRÊN (zIndex cực cao)
+                const duration = 3 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 2000 };
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+                    if (timeLeft <= 0) return clearInterval(interval);
+                    const particleCount = 50 * (timeLeft / duration);
+                    confetti({ ...defaults, particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } });
+                }, 250);
+
+                btn.disabled = false;
+            }, 11000); 
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === "Enter" && e.shiftKey) {
+                document.getElementById('settingModal').style.display = 'flex';
+                renderSettings();
+            }
+        });
+
+        function renderSettings() {
+            const container = document.getElementById('prizeList');
+            container.innerHTML = '';
+            prizeData.forEach((p, i) => {
+                container.innerHTML += `<div class="prize-row"><input class="in-n" value="${p.name}" style="flex:2"> <input class="in-r" type="number" value="${p.rate}" style="flex:1"></div>`;
+            });
+        }
+
+        function saveSettings() {
+            const names = document.querySelectorAll('.in-n');
+            const rates = document.querySelectorAll('.in-r');
+            prizeData = [];
+            names.forEach((n, i) => prizeData.push({ name: n.value, rate: parseFloat(rates[i].value) }));
+            localStorage.setItem('femDataV3', JSON.stringify(prizeData));
+            drawWheel();
+            document.getElementById('settingModal').style.display = 'none';
+        }
+
+        function closeRes() { document.getElementById('resModal').style.display = 'none'; }
+        drawWheel();
+    </script>
+</body>
+</html>
